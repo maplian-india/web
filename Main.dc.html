@@ -279,7 +279,8 @@ a{color:#2E7D32}a:hover{color:#1B5E20}
 <option>Application Development</option><option>Web Development</option><option>Mobile App Development</option><option>AI Development</option><option>Graphic Design</option><option>Business Consulting</option><option>Marketing Consulting &amp; Activation</option><option>Project Management</option><option>Product Management</option><option>System Architecture Auditing</option>
 </select></label>
 <label style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600">Message<textarea name="message" rows="4" style="font: inherit; font-weight: 400; padding: 12px 14px; border: 1px solid #C9D6BF; border-radius: 12px; resize: vertical"></textarea></label>
-<button type="button" style="grid-column: 1 / -1; justify-self: start; background: {{accent}}; color: #FFFFFF; border: 0; font: inherit; font-weight: 700; font-size: 16px; padding: 14px 28px; border-radius: 999px; min-height: 48px; cursor: pointer">Send message</button>
+<button type="submit" style="grid-column: 1 / -1; justify-self: start; background: {{accent}}; color: #FFFFFF; border: 0; font: inherit; font-weight: 700; font-size: 16px; padding: 14px 28px; border-radius: 999px; min-height: 48px; cursor: pointer">Send message</button>
+<p data-contact-status role="status" aria-live="polite" style="grid-column: 1 / -1; margin: 0; font-size: 15px; line-height: 1.5; min-height: 22px"></p>
 </form>
 </div>
 </section>
@@ -308,6 +309,68 @@ renderVals() {
 return { accent: this.props.accent ?? '#2E7D32' };
 }
 }
+</script>
+<script>
+// Contact form -> Supabase (public.contact_messages, insert-only for the anon key)
+(function () {
+var SUPABASE_URL = 'https://vpuyptdlzdgzjlibeobz.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwdXlwdGRsemRnempsaWJlb2J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjY0ODgsImV4cCI6MjEwNjQ0MjQ4OH0.jdZUhGE9OnFXjhJAbdw6haNIIqU_w56cNqGBkWYmTK4';
+
+document.addEventListener('submit', function (event) {
+var form = event.target;
+if (!form.matches || !form.matches('form[aria-label="Contact form"]')) return;
+event.preventDefault();
+
+var button = form.querySelector('button[type="submit"]');
+var status = form.querySelector('[data-contact-status]');
+var value = function (name) { return (form.elements[name].value || '').trim(); };
+var show = function (text, color) { status.textContent = text; status.style.color = color; };
+
+var row = {
+name: value('name'),
+email: value('email'),
+phone: value('phone') || null,
+company: value('company') || null,
+service: value('service') || null,
+message: value('message')
+};
+
+if (!row.name || !row.email || !row.message) {
+show('Please fill in your name, email and message.', '#B3261E');
+return;
+}
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+show('Please enter a valid email address.', '#B3261E');
+return;
+}
+if (button.disabled) return;
+
+button.disabled = true;
+button.style.opacity = '0.6';
+show('Sending…', '#35473B');
+
+fetch(SUPABASE_URL + '/rest/v1/contact_messages', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'apikey': SUPABASE_ANON_KEY,
+'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+'Prefer': 'return=minimal'
+},
+body: JSON.stringify(row)
+}).then(function (response) {
+if (!response.ok) throw new Error('Supabase responded ' + response.status);
+form.reset();
+show('Thanks — your message has been sent. We’ll reply within one business day.', '#1F5A27');
+}).catch(function (error) {
+console.error('Contact form submission failed', error);
+show('Sorry, something went wrong. Please try again or email maplian@proton.me.', '#B3261E');
+}).then(function () {
+button.disabled = false;
+button.style.opacity = '';
+});
+});
+})();
 </script>
 </body>
 </html>
